@@ -1,0 +1,36 @@
+{
+  "name": "clavestore-pt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ClaveStore PT - loja online portuguesa para instrumentos, áudio, estúdio e artigos ligados à música, construída com MVC, Express, Sequelize/PostgreSQL, React, Bootstrap e Axios.",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace server",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "node scripts/build-sites.mjs",
+    "seed": "npm run seed --workspace server",
+    "start": "npm run start --workspace server",
+    "build:client": "npm run build --workspace client",
+    "start:server": "npm run start --workspace server"
+  },
+  "keywords": [
+    "react",
+    "express",
+    "sequelize",
+    "postgresql",
+    "bootstrap",
+    "axios",
+    "mvc",
+    "ecommerce",
+    "music",
+    "instruments",
+    "portugal"
+  ],
+  "author": "Paulo Monteiro",
+  "license": "MIT"
+}
