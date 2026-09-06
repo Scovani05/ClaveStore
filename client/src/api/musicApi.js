@@ -1,5 +1,8 @@
 import axios from "axios";
 
+let authToken = null;
+let unauthorizedHandler = null;
+
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
   timeout: 8000,
@@ -10,7 +13,43 @@ const http = axios.create({
 
 const unwrap = (response) => response.data;
 
+const setAuthToken = (token) => {
+  authToken = token || null;
+
+  if (authToken) {
+    http.defaults.headers.common.Authorization = `Bearer ${authToken}`;
+    return;
+  }
+
+  delete http.defaults.headers.common.Authorization;
+};
+
+const setUnauthorizedHandler = (handler) => {
+  unauthorizedHandler = typeof handler === "function" ? handler : null;
+};
+
+http.interceptors.request.use((config) => {
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  return config;
+});
+
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && unauthorizedHandler && !String(error.config?.url || "").startsWith("/auth/")) {
+      unauthorizedHandler();
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export const musicApi = {
+  setAuthToken,
+  setUnauthorizedHandler,
   register: (payload) => http.post("/auth/register", payload).then(unwrap),
   login: (payload) => http.post("/auth/login", payload).then(unwrap),
   getCart: (userId) => http.get(`/carts/${userId}`).then(unwrap),

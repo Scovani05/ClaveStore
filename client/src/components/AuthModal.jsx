@@ -4,17 +4,13 @@ const initialForm = {
   name: "",
   email: "",
   password: "",
-  city: ""
+  city: "",
+  adminCode: ""
 };
 
 const roleLabels = {
   client: "cliente",
   admin: "admin"
-};
-
-const demoCredentials = {
-  client: { email: "cliente@clavestore.pt", password: "cliente123" },
-  admin: { email: "admin@clavestore.pt", password: "admin123" }
 };
 
 export default function AuthModal({ defaultMode = "login", defaultRole = "client", isOpen, onClose, onSubmit }) {
@@ -32,10 +28,7 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
     setMode(defaultMode);
     setRole(defaultRole);
     setError("");
-    setForm((current) => ({
-      ...current,
-      ...(defaultMode === "login" ? demoCredentials[defaultRole] : {})
-    }));
+    setForm(initialForm);
   }, [defaultMode, defaultRole, isOpen]);
 
   if (!isOpen) {
@@ -48,18 +41,12 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
 
   const selectMode = (nextMode) => {
     setMode(nextMode);
-
-    if (nextMode === "login") {
-      setForm((current) => ({ ...current, ...demoCredentials[role] }));
-    }
+    setError("");
   };
 
   const selectRole = (nextRole) => {
     setRole(nextRole);
-
-    if (mode === "login") {
-      setForm((current) => ({ ...current, ...demoCredentials[nextRole] }));
-    }
+    setError("");
   };
 
   const submit = async (event) => {
@@ -118,6 +105,7 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
               Nome
               <input
                 className="form-control"
+                maxLength="80"
                 onChange={(event) => updateForm("name", event.target.value)}
                 required
                 type="text"
@@ -129,7 +117,9 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
           <label>
             Email
             <input
+              autoComplete="email"
               className="form-control"
+              maxLength="160"
               onChange={(event) => updateForm("email", event.target.value)}
               required
               type="email"
@@ -140,8 +130,9 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
           <label>
             Palavra-passe
             <input
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               className="form-control"
-              minLength="6"
+              minLength="8"
               onChange={(event) => updateForm("password", event.target.value)}
               required
               type="password"
@@ -154,9 +145,24 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
               Cidade
               <input
                 className="form-control"
+                maxLength="80"
                 onChange={(event) => updateForm("city", event.target.value)}
                 type="text"
                 value={form.city}
+              />
+            </label>
+          )}
+
+          {mode === "register" && role === "admin" && (
+            <label>
+              Código admin
+              <input
+                autoComplete="one-time-code"
+                className="form-control"
+                onChange={(event) => updateForm("adminCode", event.target.value)}
+                required
+                type="password"
+                value={form.adminCode}
               />
             </label>
           )}
@@ -168,12 +174,6 @@ export default function AuthModal({ defaultMode = "login", defaultRole = "client
             <span>{isSubmitting ? "A validar..." : mode === "login" ? "Entrar" : "Criar conta"}</span>
           </button>
         </form>
-
-        <div className="auth-demo-note">
-          <strong>Contas de teste</strong>
-          <span>cliente@clavestore.pt / cliente123</span>
-          <span>admin@clavestore.pt / admin123</span>
-        </div>
       </section>
     </div>
   );

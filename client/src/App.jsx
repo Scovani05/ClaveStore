@@ -163,7 +163,11 @@ const sortProducts = (products, sortKey) => {
 
 export default function App() {
   const [activeView, setActiveView] = useState("shop");
-  const [authUser, setAuthUser] = useState(() => readStoredAuth());
+  const [authUser, setAuthUser] = useState(() => {
+    const storedAuth = readStoredAuth();
+    musicApi.setAuthToken(storedAuth?.token || null);
+    return storedAuth;
+  });
   const [authDialog, setAuthDialog] = useState({ isOpen: false, mode: "login", role: "client", redirectView: null });
   const [dashboard, setDashboard] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -204,10 +208,17 @@ export default function App() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [authUser?.token]);
 
   useEffect(() => {
     let ignore = false;
+
+    if (authUser?.role !== "admin") {
+      setInsight(null);
+      return () => {
+        ignore = true;
+      };
+    }
 
     musicApi
       .getInsight()
@@ -230,7 +241,7 @@ export default function App() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [authUser?.role, authUser?.token]);
 
   useEffect(() => {
     if (!notice) {
@@ -242,6 +253,21 @@ export default function App() {
   }, [notice]);
 
   useEffect(() => {
+    musicApi.setUnauthorizedHandler(() => {
+      musicApi.setAuthToken(null);
+      removeStorageItem(AUTH_STORAGE_KEY);
+      setAuthUser(null);
+      setCart(readStoredCart(null));
+      setActiveView("shop");
+      setNotice("Sessão expirada. Inicia sessão novamente.");
+    });
+
+    return () => musicApi.setUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
+    musicApi.setAuthToken(authUser?.token || null);
+
     if (authUser) {
       writeJsonStorage(AUTH_STORAGE_KEY, authUser);
       return;
@@ -338,26 +364,29 @@ export default function App() {
       const data = payload.mode === "register" ? await musicApi.register(payload) : await musicApi.login(payload);
       const user = data.user;
 
-      if (!user) {
+      if (!user || !data.token) {
         throw new Error("Não foi possível validar a conta.");
       }
 
-      if (user.role === "client") {
+      const sessionUser = { ...user, token: data.token };
+      musicApi.setAuthToken(data.token);
+
+      if (sessionUser.role === "client") {
         const remoteCart = Array.isArray(data.cart?.items) ? data.cart.items : [];
-        const localCart = readStoredCart(user);
+        const localCart = readStoredCart(sessionUser);
         const mergedCart = mergeCartEntries(cart, localCart, remoteCart);
         setCart(mergedCart);
-        saveStoredCart(user, mergedCart);
-        musicApi.saveCart(user.id, mergedCart).catch(() => undefined);
+        saveStoredCart(sessionUser, mergedCart);
+        musicApi.saveCart(sessionUser.id, mergedCart).catch(() => undefined);
         setNotice(mergedCart.length ? "Sessão iniciada e carrinho recuperado." : "Sessão iniciada.");
       } else {
         setNotice("Sessão admin iniciada.");
       }
 
-      setAuthUser(user);
+      setAuthUser(sessionUser);
       closeAuthDialog();
 
-      if (user.role === "admin") {
+      if (sessionUser.role === "admin") {
         setActiveView(authDialog.redirectView || "admin");
       } else {
         setActiveView("shop");
@@ -373,6 +402,7 @@ export default function App() {
       musicApi.saveCart(authUser.id, cart).catch(() => undefined);
     }
 
+    musicApi.setAuthToken(null);
     setAuthUser(null);
     setCart(readStoredCart(null));
     setActiveView("shop");
@@ -432,49 +462,24 @@ export default function App() {
       items: cartItems.map((item) => ({ productId: item.id, quantity: item.quantity }))
     };
 
-    const optimisticOrder = {
-      id: Date.now(),
-      workspaceId: workspace.id,
-      customerName: payload.customerName,
-      email: payload.email,
-      city: payload.city,
-      status: "paid",
-      paymentMethod: payload.paymentMethod,
-      subtotal: cartTotals.subtotal,
-      tax: cartTotals.tax,
-      shipping: cartTotals.shipping,
-      total: cartTotals.total,
-      createdAt: new Date().toISOString(),
-      items: cartItems.map((item) => ({
-        productId: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        total: Number((item.price * item.quantity).toFixed(2))
-      }))
-    };
-
-    updateDashboard((current) => ({
-      ...current,
-      products: current.products.map((product) => {
-        const sold = cartItems.find((item) => item.id === product.id);
-        return sold ? { ...product, stock: Math.max(0, Number(product.stock || 0) - sold.quantity) } : product;
-      }),
-      orders: [optimisticOrder, ...current.orders]
-    }));
-    setCart([]);
-    setActiveView("shop");
-    setNotice("Encomenda criada com sucesso.");
-
     try {
       const createdOrder = await musicApi.createOrder(payload);
+
       updateDashboard((current) => ({
         ...current,
-        orders: current.orders.map((order) => (order.id === optimisticOrder.id ? createdOrder : order))
+        products: current.products.map((product) => {
+          const sold = cartItems.find((item) => item.id === product.id);
+          return sold ? { ...product, stock: Math.max(0, Number(product.stock || 0) - sold.quantity) } : product;
+        }),
+        orders: [createdOrder, ...current.orders]
       }));
+
+      setCart([]);
+      setActiveView("shop");
       setApiStatus("PostgreSQL ativo");
+      setNotice("Encomenda criada com sucesso.");
     } catch (error) {
-      setApiStatus("dados locais");
+      setNotice(error.response?.data?.message || "Não foi possível finalizar a encomenda.");
     }
   };
 

@@ -97,7 +97,7 @@ const ensureWorkspace = async () => {
   return workspace;
 };
 
-const getDbDashboard = async () => {
+const getDbDashboard = async ({ includeOrders = false } = {}) => {
   const sample = getSampleDashboard();
   const workspace = await models.Workspace.findOne({ order: [["id", "ASC"]] });
   const products = await models.Product.findAll({ order: [["isFeatured", "DESC"], ["rating", "DESC"], ["name", "ASC"]] });
@@ -118,7 +118,7 @@ const getDbDashboard = async () => {
     workspace: workspace.toJSON(),
     categories: [...new Set(plainProducts.map((product) => product.category))],
     products: plainProducts,
-    orders: plainOrders,
+    orders: includeOrders ? plainOrders : [],
     stats: computeStats(plainProducts, plainOrders, sample.stats),
     meta: {
       ...sample.meta,
@@ -128,10 +128,11 @@ const getDbDashboard = async () => {
   };
 };
 
-const getDemoDashboard = () => {
+const getDemoDashboard = ({ includeOrders = false } = {}) => {
   const sample = getSampleDashboard();
   return {
     ...sample,
+    orders: includeOrders ? sample.orders : [],
     stats: computeStats(sample.products, sample.orders, sample.stats),
     meta: {
       ...sample.meta,
@@ -197,11 +198,11 @@ const buildOrderDraft = (payload, products, workspace) => {
 };
 
 export const musicStoreService = {
-  async getDashboard() {
+  async getDashboard(options = {}) {
     try {
-      return await getDbDashboard();
+      return await getDbDashboard(options);
     } catch (error) {
-      return getDemoDashboard();
+      return getDemoDashboard(options);
     }
   },
 

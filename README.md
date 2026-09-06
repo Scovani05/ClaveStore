@@ -10,10 +10,10 @@ Guia para publicar em GitHub + Neon + Render + Vercel: `DEPLOYMENT.md`
 
 - Catálogo com pesquisa, filtros por categoria, ordenação e ficha detalhada de produto.
 - Galeria de fotografias, especificações, ratings e comentários por produto.
-- Login e registo para cliente e admin.
+- Login e registo com token de sessão para cliente e admin.
 - Carrinho guardado por cliente, com recuperação em sessões seguintes.
-- Checkout disponível apenas para cliente autenticado.
-- Backoffice protegido por conta admin.
+- Checkout disponível apenas para cliente autenticado e validado no backend.
+- Backoffice protegido por token admin nas rotas do backend.
 - Criação de encomendas e alteração de estados: pendente, pago, preparação, enviado, entregue e cancelado.
 - Backoffice separado para criar produtos, ajustar preço/stock e acompanhar alertas.
 - Dashboard com receita, unidades vendidas, valor em stock, ticket médio e produtos com baixo stock.
@@ -26,6 +26,15 @@ Cliente: cliente@clavestore.pt / cliente123
 Admin:   admin@clavestore.pt / admin123
 ```
 
+
+## Segurança
+
+- Passwords com hash `scrypt` e salt individual.
+- Tokens assinados para manter a sessão autenticada.
+- Rotas de carrinho, checkout, produtos, encomendas e relatórios protegidas por middleware Express.
+- Registo de administradores protegido por código privado.
+- CORS configurável por `CLIENT_URL`.
+- Headers de segurança, limite de payload JSON e rate limit simples na API.
 ## Requisitos cumpridos
 
 - Arquitetura MVC no backend: `models`, `controllers`, `services` e `routes`.
@@ -68,6 +77,8 @@ Configurar no servidor local, Render/Neon ou plataforma equivalente:
 ```bash
 DATABASE_URL=postgres://user:password@host:5432/database?sslmode=require
 CLIENT_URL=https://o-teu-front-end.pt
+AUTH_SECRET=troca-esta-chave-por-uma-string-com-mais-de-32-caracteres
+ADMIN_REGISTRATION_CODE=troca-este-codigo-admin
 DEMO_FALLBACK=true
 ```
 

@@ -10,7 +10,7 @@ Este guia usa uma separação simples e fácil de defender:
 O projeto local recomendado é:
 
 ```text
-C:\Users\Paulo Monteiro\Desktop\ClaveStore_PT
+C:\Users\Paulo Monteiro\OneDrive\Documentos\GitHub\ClaveStore
 ```
 
 ## 1. Confirmar que o projeto está pronto
@@ -18,7 +18,7 @@ C:\Users\Paulo Monteiro\Desktop\ClaveStore_PT
 No terminal, entra na pasta do projeto:
 
 ```bash
-cd "C:\Users\Paulo Monteiro\Desktop\ClaveStore_PT"
+cd "C:\Users\Paulo Monteiro\OneDrive\Documentos\GitHub\ClaveStore"
 ```
 
 Instala e testa a build:
@@ -41,7 +41,7 @@ Se a build terminar sem erros, o projeto está pronto para publicar.
 Depois, no terminal:
 
 ```bash
-cd "C:\Users\Paulo Monteiro\Desktop\ClaveStore_PT"
+cd "C:\Users\Paulo Monteiro\OneDrive\Documentos\GitHub\ClaveStore"
 git status
 git add .
 git commit -m "Versao final para deploy"
@@ -94,6 +94,8 @@ Start Command: npm start
 NODE_ENV=production
 DATABASE_URL=<connection string do Neon>
 CLIENT_URL=https://clavestore-pt.vercel.app
+AUTH_SECRET=<string segura com pelo menos 32 caracteres>
+ADMIN_REGISTRATION_CODE=<codigo privado para criar admins>
 DEMO_FALLBACK=false
 ```
 
@@ -125,7 +127,7 @@ No Render:
 npm run seed
 ```
 
-Isto cria categorias, produtos, utilizadores de teste, encomendas e dados de dashboard.
+Isto cria categorias, produtos, utilizadores de teste, encomendas e dados de dashboard. As passwords ficam guardadas com hash seguro, não em texto simples.
 
 Contas de teste:
 
@@ -222,3 +224,24 @@ Backend:  https://URL-DO-RENDER
 - A área de backoffice só aparece para utilizadores admin.
 - O ficheiro `client/src/api/musicApi.js` usa `VITE_API_URL` para chamar a API online.
 - O ficheiro `server/src/app.js` usa `CLIENT_URL` para permitir o domínio da Vercel no CORS.
+## 11. Segurança implementada
+
+- Passwords guardadas com `scrypt` e salt individual.
+- Compatibilidade com hashes antigos para permitir migração automática no login.
+- Token assinado enviado pelo backend após login/registo.
+- Axios envia `Authorization: Bearer <token>` nas chamadas protegidas.
+- Carrinho protegido: cada cliente só acede ao seu próprio carrinho.
+- Checkout protegido: só clientes autenticados conseguem criar encomendas.
+- Backoffice protegido: produtos, encomendas e relatórios exigem token admin.
+- Registo admin protegido por `ADMIN_REGISTRATION_CODE`.
+- Dashboard público não devolve lista completa de encomendas.
+- API com headers de segurança, limite de JSON e rate limit básico.
+- CORS limitado ao domínio configurado em `CLIENT_URL`.
+
+Para gerar uma chave segura localmente, podes usar:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
+```
+
+Usa o resultado em `AUTH_SECRET` no Render.

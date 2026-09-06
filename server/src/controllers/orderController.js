@@ -11,7 +11,12 @@ export const orderController = {
 
   async create(request, response, next) {
     try {
-      const order = await musicStoreService.createOrder(request.body);
+      const order = await musicStoreService.createOrder({
+        ...request.body,
+        userId: request.auth.userId,
+        customerName: request.auth.name || request.body.customerName,
+        email: request.auth.email || request.body.email
+      });
       response.status(201).json(order);
     } catch (error) {
       next(error);
