@@ -13,3 +13,4 @@ server/logs/
 client/.vite/
 work/
 outputs/
+.neon
